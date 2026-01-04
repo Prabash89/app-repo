@@ -1,0 +1,59 @@
+name: CI - Build & Push Image to ECR
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "apps/sample-app/**"
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout application repo
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials using OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::495294314260:role/github-app-ci-role
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build & Push Docker image
+      run: |
+        IMAGE_TAG=${GITHUB_SHA::7}
+        IMAGE_URI=495294314260.dkr.ecr.us-east-1.amazonaws.com/sample-app
+
+        docker build -t $IMAGE_URI:$IMAGE_TAG apps/sample-app
+        docker push $IMAGE_URI:$IMAGE_TAG
+
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+    - name: Checkout GitOps repository
+      uses: actions/checkout@v4
+      with:
+        repository: Prabash89/eks-gitops
+        token: ${{ secrets.GITOPS_TOKEN }}
+        path: gitops
+
+    - name: Update image tag in GitOps repo
+      run: |
+        sed -i "s|sample-app:.*|sample-app:${IMAGE_TAG}|g" \
+        gitops/apps/sample-app/deployment.yaml
+
+    - name: Commit & push GitOps changes
+      run: |
+        cd gitops
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add .
+        git commit -m "Update sample-app image to ${IMAGE_TAG}"
+        git push
