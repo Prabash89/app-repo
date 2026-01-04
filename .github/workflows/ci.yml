@@ -47,7 +47,7 @@ jobs:
     - name: Update image tag in GitOps repo
       run: |
         sed -i "s|sample-app:.*|sample-app:${IMAGE_TAG}|g" \
-        gitops-repo/apps/sample-app/deployment.yaml
+        gitops/apps/sample-app/deployment.yaml
 
     - name: Commit & push GitOps changes
       run: |
