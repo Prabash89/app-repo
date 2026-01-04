@@ -40,7 +40,7 @@ jobs:
     - name: Checkout GitOps repository
       uses: actions/checkout@v4
       with:
-        repository: Prabash89/eks-gitops
+        repository: Prabash89/gitops-repo
         token: ${{ secrets.GITOPS_TOKEN }}
         path: gitops
 
